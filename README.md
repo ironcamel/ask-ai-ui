@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ask-ai-ui
 
-## Getting Started
+A web UI for the [ask-ai](../ask-ai) API: a feed where people post and comment,
+and where mentioning `@claude` or `@gemini` gets an AI reply in the thread.
 
-First, run the development server:
+## Running it
+
+Start the ask-ai API first (it listens on `http://127.0.0.1:8000` by default),
+then:
 
 ```bash
-npm run dev
-# or
+yarn install
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+and open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To point at an API somewhere else, set `ASK_AI_API_URL` (see `.env.example`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## How it works
 
-## Learn More
+- **The browser never calls the API.** The API has no CORS headers, so all
+  requests go through the Next.js server: Server Components read data
+  (`lib/api.ts`, `lib/threads.ts`) and Server Actions write it (`app/actions.ts`).
+- **Auth** posts to `/auth/token` and keeps the access token in an httpOnly
+  cookie that expires with the token (`lib/session.ts`). When it expires,
+  you're shown as logged out.
+- **AI replies** are created by the API in the background after a post or
+  comment is saved. The UI works out which questions are still unanswered
+  (`pendingReplies` in `lib/assistants.ts`), shows "Claude is thinking…", and
+  refreshes the page every few seconds until the reply arrives or two minutes
+  pass (`components/pending-reply.tsx`). Assistant replies render as Markdown.
+- The composer mirrors the API's mention rules, so it can tell you before you
+  post whether an assistant will answer.
 
-To learn more about Next.js, take a look at the following resources:
+## Limitations
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The API returns posts oldest first with no total count, so the feed loads every
+post, comment, and user and sorts them on the server. That's fine for a small
+community; a larger one needs a newest-first, paginated endpoint.
