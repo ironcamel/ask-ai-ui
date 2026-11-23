@@ -3,6 +3,8 @@
 A web UI for the [ask-ai](../ask-ai) API: a feed where people post and comment,
 and where mentioning `@claude` or `@gemini` gets an AI reply in the thread.
 
+![screenshot](docs/screenshot1.png)
+
 ## Running it
 
 Start the ask-ai API first (it listens on `http://127.0.0.1:8000` by default),
