@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+coverage
+.git
+.claude
+.vercel
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+Dockerfile
+.dockerignore
