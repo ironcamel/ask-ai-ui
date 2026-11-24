@@ -21,6 +21,7 @@ const NAMES = ASSISTANTS.join("|");
 // "@claude" must stand alone: "@claudette" and "bob@claude.com" don't count.
 const MENTION = new RegExp(`(?<![\\p{L}\\p{N}_])@(${NAMES})(?![\\p{L}\\p{N}_])`, "u");
 const MENTION_SPLIT = new RegExp(`((?<![\\p{L}\\p{N}_])@(?:${NAMES})(?![\\p{L}\\p{N}_]))`, "u");
+const MENTION_ALL = new RegExp(MENTION.source, "gu");
 
 /**
  * The assistant that will answer this body, matching the API's rules: the
@@ -50,6 +51,11 @@ export function splitMentions(
         ? { text, mention: text.slice(1) as Assistant }
         : { text },
     );
+}
+
+/** Point every @mention in a body at this assistant instead. */
+export function replaceMentions(body: string, assistant: Assistant): string {
+  return body.replace(MENTION_ALL, `@${assistant}`);
 }
 
 export type PendingReply = { assistant: Assistant; since: string };

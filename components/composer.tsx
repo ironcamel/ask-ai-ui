@@ -6,13 +6,15 @@ import {
   ASSISTANT_LABELS,
   ASSISTANTS,
   findMention,
+  replaceMentions,
   splitMentions,
+  type Assistant,
 } from "@/lib/assistants";
 
-function mentionHint(body: string): { text: string; tone: "info" | "warn" } | null {
-  const mentioned = new Set(
-    splitMentions(body).flatMap((p) => (p.mention ? [p.mention] : [])),
-  );
+function mentionHint(
+  body: string,
+  mentioned: Set<Assistant>,
+): { text: string; tone: "info" | "warn" } | null {
   if (mentioned.size === 0) {
     return null;
   }
@@ -81,11 +83,20 @@ export function Composer({
     }
   }, [body]);
 
-  function insertMention(assistant: string) {
+  function insertMention(assistant: Assistant) {
     const el = textarea.current;
-    const mention = `@${assistant} `;
     const start = el?.selectionStart ?? body.length;
     const end = el?.selectionEnd ?? body.length;
+    if (mentioned.size > 0) {
+      // Point the existing mentions at this assistant instead.
+      setBody(replaceMentions(body, assistant));
+      requestAnimationFrame(() => {
+        el?.focus();
+        el?.setSelectionRange(start, end);
+      });
+      return;
+    }
+    const mention = `@${assistant} `;
     const before = body.slice(0, start);
     const spacer = before && !/\s$/.test(before) ? " " : "";
     const next = before + spacer + mention + body.slice(end);
@@ -97,7 +108,10 @@ export function Composer({
     });
   }
 
-  const hint = assistantHints ? mentionHint(body) : null;
+  const mentioned = new Set(
+    splitMentions(body).flatMap((p) => (p.mention ? [p.mention] : [])),
+  );
+  const hint = assistantHints ? mentionHint(body, mentioned) : null;
   const empty = body.trim() === "";
   const showControls = !compact || focused || !empty || Boolean(state.error);
 
@@ -134,10 +148,11 @@ export function Composer({
               // Keep focus in the textarea so a compact composer stays open.
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => insertMention(assistant)}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              disabled={mentioned.has(assistant)}
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-40 ${
                 assistant === "claude"
-                  ? "border-claude/30 text-claude-ink hover:bg-claude/10"
-                  : "border-gemini/30 text-gemini-ink hover:bg-gemini/10"
+                  ? "border-claude/30 text-claude-ink enabled:hover:bg-claude/10"
+                  : "border-gemini/30 text-gemini-ink enabled:hover:bg-gemini/10"
               }`}
             >
               Ask @{assistant}
