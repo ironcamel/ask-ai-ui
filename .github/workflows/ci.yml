@@ -1,0 +1,46 @@
+# Lints and builds every push and pull request. Pushes to main that pass are
+# deployed to ECS with scripts/deploy.sh, the same script used locally.
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24 # matches the Dockerfile
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint
+      # Also type checks the project.
+      - run: yarn build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Deploys run one at a time, in order; a new push waits for the current one.
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write # lets the job sign in to AWS with OIDC, without stored keys
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::551522033132:role/github-actions-ask-ai-ui-deploy
+          aws-region: us-east-1
+      - run: scripts/deploy.sh

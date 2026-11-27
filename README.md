@@ -27,6 +27,11 @@ pushes it to ECR, and rolls the service onto it. Run it with AWS credentials in
 the environment. The comment at the top of the script covers its settings and
 the one-time AWS setup.
 
+GitHub Actions (`.github/workflows/ci.yml`) lints and builds every push and pull
+request, and runs the same script for pushes to `main` that pass. It signs in to
+AWS with OIDC as the `github-actions-ask-ai-ui-deploy` role, which only `main`
+of this repo can assume.
+
 ## How it works
 
 - **The browser never calls the API.** The API has no CORS headers, so all
