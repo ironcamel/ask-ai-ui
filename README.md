@@ -19,6 +19,14 @@ and open http://localhost:3000.
 
 To point at an API somewhere else, set `ASK_AI_API_URL` (see `.env.example`).
 
+## Deploying
+
+The app runs on AWS as an ECS Express Mode service, `ask-ai-ui-1056`.
+`scripts/deploy.sh` deploys the current commit to it: it builds the image,
+pushes it to ECR, and rolls the service onto it. Run it with AWS credentials in
+the environment. The comment at the top of the script covers its settings and
+the one-time AWS setup.
+
 ## How it works
 
 - **The browser never calls the API.** The API has no CORS headers, so all
