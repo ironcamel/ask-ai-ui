@@ -19,6 +19,11 @@ and open http://localhost:3000.
 
 To point at an API somewhere else, set `ASK_AI_API_URL` (see `.env.example`).
 
+For password reset emails to link back here, set `PASSWORD_RESET_URL` on the
+API to this app's `/reset-password` page, e.g.
+`http://localhost:3000/reset-password`. Without it, the email contains just a
+token, which `/reset-password` also accepts pasted in.
+
 ## Deploying
 
 The app runs on AWS as an ECS Express Mode service, `ask-ai-ui-1056`.
