@@ -23,11 +23,12 @@ export class ApiError extends Error {
 type RequestOptions = {
   method?: string;
   token?: string;
+  cookie?: string;
   json?: unknown;
   form?: Record<string, string>;
 };
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function send(path: string, options: RequestOptions = {}): Promise<Response> {
   const headers: Record<string, string> = { Accept: "application/json" };
   let body: BodyInit | undefined;
   if (options.json !== undefined) {
@@ -39,6 +40,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (options.token) {
     headers.Authorization = `Bearer ${options.token}`;
   }
+  if (options.cookie) {
+    headers.Cookie = options.cookie;
+  }
 
   const res = await fetch(`${API_URL}${path}`, {
     method: options.method ?? "GET",
@@ -48,6 +52,11 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (!res.ok) {
     throw new ApiError(res.status, await errorMessage(res));
   }
+  return res;
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await send(path, options);
   if (res.status === 204) {
     return undefined as T;
   }
@@ -103,10 +112,57 @@ export const getMe = (token: string) => request<User>("/users/me", { token });
 
 // Auth
 
-export const login = (username: string, password: string) =>
-  request<{ access_token: string }>("/auth/token", {
+// The API hands out the refresh token as a cookie, meant for a browser. This
+// server plays the browser: it takes the token out of Set-Cookie and sends it
+// back in a Cookie header.
+const REFRESH_COOKIE = "refresh_token";
+
+export type Tokens = {
+  accessToken: string;
+  // Missing if the API didn't set the cookie.
+  refreshToken?: string;
+  // Seconds until the refresh token expires, from the cookie's Max-Age.
+  refreshMaxAge?: number;
+};
+
+async function tokens(res: Response): Promise<Tokens> {
+  const { access_token } = await res.json();
+  const cookie = res.headers
+    .getSetCookie()
+    .find((c) => c.startsWith(`${REFRESH_COOKIE}=`));
+  const refreshToken = cookie?.split(";")[0].slice(REFRESH_COOKIE.length + 1);
+  const maxAge = cookie?.match(/;\s*max-age=(\d+)/i)?.[1];
+  return {
+    accessToken: access_token,
+    refreshToken: refreshToken || undefined,
+    refreshMaxAge: maxAge ? Number(maxAge) : undefined,
+  };
+}
+
+const refreshCookie = (refreshToken: string) =>
+  `${REFRESH_COOKIE}=${refreshToken}`;
+
+export const login = async (username: string, password: string) =>
+  tokens(
+    await send("/auth/token", {
+      method: "POST",
+      form: { grant_type: "password", username, password },
+    }),
+  );
+
+// Each refresh token works once: this returns its replacement.
+export const refresh = async (refreshToken: string) =>
+  tokens(
+    await send("/auth/refresh", {
+      method: "POST",
+      cookie: refreshCookie(refreshToken),
+    }),
+  );
+
+export const logout = (refreshToken: string) =>
+  request<void>("/auth/logout", {
     method: "POST",
-    form: { grant_type: "password", username, password },
+    cookie: refreshCookie(refreshToken),
   });
 
 export const createUser = (username: string, email: string, password: string) =>

@@ -3,7 +3,12 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import * as api from "@/lib/api";
-import { clearToken, getToken, saveToken } from "@/lib/session";
+import {
+  clearTokens,
+  getRefreshToken,
+  getToken,
+  saveTokens,
+} from "@/lib/session";
 
 export type ActionResult = { error?: string };
 
@@ -20,7 +25,7 @@ async function requireToken(): Promise<string> {
 async function failure(error: unknown): Promise<ActionResult> {
   if (error instanceof api.ApiError) {
     if (error.status === 401) {
-      await clearToken();
+      await clearTokens();
       return { error: "Your session has expired. Log in again." };
     }
     if (error.status === 403) {
@@ -53,8 +58,7 @@ export async function login(
   const username = text(formData, "username");
   const password = String(formData.get("password") ?? "");
   try {
-    const { access_token } = await api.login(username, password);
-    await saveToken(access_token);
+    await saveTokens(await api.login(username, password));
   } catch (error) {
     if (error instanceof api.ApiError && error.status === 401) {
       return { error: "Wrong username or password." };
@@ -76,8 +80,7 @@ export async function signup(
   }
   try {
     await api.createUser(username, email, password);
-    const { access_token } = await api.login(username, password);
-    await saveToken(access_token);
+    await saveTokens(await api.login(username, password));
   } catch (error) {
     return failure(error);
   }
@@ -128,7 +131,16 @@ export async function resetPassword(
 }
 
 export async function logout() {
-  await clearToken();
+  const refreshToken = await getRefreshToken();
+  if (refreshToken) {
+    try {
+      await api.logout(refreshToken);
+    } catch (error) {
+      // Log out here anyway; the refresh token expires on its own.
+      console.error(error);
+    }
+  }
+  await clearTokens();
   redirect("/");
 }
 

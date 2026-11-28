@@ -11,6 +11,7 @@
           "auth"
         ],
         "summary": "Login",
+        "description": "Log in, and get an access token and a refresh token cookie.",
         "operationId": "login_auth_token_post",
         "requestBody": {
           "content": {
@@ -32,6 +33,99 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Refresh",
+        "description": "Get a new access token with the refresh token cookie.\n\nThe cookie is replaced with a new refresh token, since each works once.",
+        "operationId": "refresh_auth_refresh_post",
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Refresh Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Logout",
+        "description": "Revoke the refresh token cookie, and delete it.\n\nAccess tokens already issued still work until they expire.",
+        "operationId": "logout_auth_logout_post",
+        "parameters": [
+          {
+            "name": "refresh_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Refresh Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -1335,6 +1429,10 @@
             "type": "string",
             "title": "Access Token"
           },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          },
           "token_type": {
             "type": "string",
             "title": "Token Type",
@@ -1343,7 +1441,8 @@
         },
         "type": "object",
         "required": [
-          "access_token"
+          "access_token",
+          "expires_in"
         ],
         "title": "Token"
       },
