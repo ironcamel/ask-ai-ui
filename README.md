@@ -24,6 +24,10 @@ API to this app's `/reset-password` page, e.g.
 `http://localhost:3000/reset-password`. Without it, the email contains just a
 token, which `/reset-password` also accepts pasted in.
 
+`yarn test` runs the [Vitest](https://vitest.dev) tests, kept next to the code
+they cover as `*.test.ts(x)`. It watches for changes; `yarn test --run` runs
+them once.
+
 ## Deploying
 
 The app runs on AWS as an ECS Express Mode service, `ask-ai-ui-1056`.
@@ -32,8 +36,8 @@ pushes it to ECR, and rolls the service onto it. Run it with AWS credentials in
 the environment. The comment at the top of the script covers its settings and
 the one-time AWS setup.
 
-GitHub Actions (`.github/workflows/ci.yml`) lints and builds every push and pull
-request, and runs the same script for pushes to `main` that pass. It signs in to
+GitHub Actions (`.github/workflows/ci.yml`) lints, tests and builds every push
+and pull request, and runs the same script for pushes to `main` that pass. It signs in to
 AWS with OIDC as the `github-actions-ask-ai-ui-deploy` role, which only `main`
 of this repo can assume.
 
