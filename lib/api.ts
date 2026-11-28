@@ -112,6 +112,16 @@ export const login = (username: string, password: string) =>
 export const createUser = (username: string, email: string, password: string) =>
   request<User>("/users", { method: "POST", json: { username, email, password } });
 
+// Answers the same whether or not an account uses the address.
+export const requestPasswordReset = (email: string) =>
+  request<void>("/auth/password-reset", { method: "POST", json: { email } });
+
+export const resetPassword = (token: string, password: string) =>
+  request<void>("/auth/password-reset/confirm", {
+    method: "POST",
+    json: { token, password },
+  });
+
 // Writes
 
 export const createPost = (token: string, body: string) =>

@@ -84,6 +84,49 @@ export async function signup(
   redirect("/");
 }
 
+export type ResetRequestResult = ActionResult & { sentTo?: string };
+
+export async function requestPasswordReset(
+  _prev: ResetRequestResult,
+  formData: FormData,
+): Promise<ResetRequestResult> {
+  const email = text(formData, "email");
+  try {
+    await api.requestPasswordReset(email);
+  } catch (error) {
+    return failure(error);
+  }
+  return { sentTo: email };
+}
+
+export async function resetPassword(
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const token = text(formData, "token");
+  const password = String(formData.get("password") ?? "");
+  if (!token) {
+    return { error: "Paste the reset token from the email." };
+  }
+  if (password.length < 8) {
+    return { error: "Password must be at least 8 characters." };
+  }
+  if (password !== String(formData.get("confirm") ?? "")) {
+    return { error: "The passwords don't match." };
+  }
+  try {
+    await api.resetPassword(token, password);
+  } catch (error) {
+    if (error instanceof api.ApiError && error.status === 400) {
+      return {
+        error: "This reset link has expired or was already used. Ask for a new one.",
+      };
+    }
+    return failure(error);
+  }
+  redirect("/login?reset=1");
+}
+
 export async function logout() {
   await clearToken();
   redirect("/");

@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
-import { login, signup, type ActionResult } from "@/app/actions";
+import {
+  login,
+  requestPasswordReset,
+  resetPassword,
+  signup,
+  type ActionResult,
+} from "@/app/actions";
 
 function Field({
   label,
@@ -42,12 +48,24 @@ function ErrorMessage({ state }: { state: ActionResult }) {
   ) : null;
 }
 
+function Notice({ children }: { children: React.ReactNode }) {
+  return (
+    <p role="status" className="rounded-xl bg-accent/10 px-3.5 py-2.5 text-sm">
+      {children}
+    </p>
+  );
+}
+
 export function LoginForm() {
-  const next = useSearchParams().get("next") ?? "/";
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/";
   const [state, action, pending] = useActionState(login, {});
   return (
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="next" value={next} />
+      {searchParams.has("reset") && !state.error && (
+        <Notice>Your password has been changed. Log in with the new one.</Notice>
+      )}
       <ErrorMessage state={state} />
       <Field label="Username" name="username" autoComplete="username" required autoFocus />
       <Field
@@ -57,6 +75,12 @@ export function LoginForm() {
         autoComplete="current-password"
         required
       />
+      <Link
+        href="/forgot-password"
+        className="-mt-2 self-end text-sm text-muted hover:text-foreground hover:underline"
+      >
+        Forgot your password?
+      </Link>
       <Submit pending={pending} label="Log in" />
       <p className="text-center text-sm text-muted">
         New here?{" "}
@@ -97,6 +121,100 @@ export function SignupForm() {
         Already have an account?{" "}
         <Link href="/login" className="font-medium text-foreground hover:underline">
           Log in
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export function ForgotPasswordForm() {
+  const [state, action, pending] = useActionState(requestPasswordReset, {});
+  if (state.sentTo) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Notice>
+          If an account uses <strong className="font-semibold">{state.sentTo}</strong>,
+          we&apos;ve emailed it a link to reset the password. The link works once and
+          expires soon.
+        </Notice>
+        <p className="text-center text-sm text-muted">
+          Got a token instead of a link?{" "}
+          <Link
+            href="/reset-password"
+            className="font-medium text-foreground hover:underline"
+          >
+            Enter it here
+          </Link>
+        </p>
+      </div>
+    );
+  }
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <ErrorMessage state={state} />
+      <Field
+        label="Email"
+        name="email"
+        type="email"
+        autoComplete="email"
+        required
+        autoFocus
+      />
+      <Submit pending={pending} label="Email me a reset link" />
+      <p className="text-center text-sm text-muted">
+        Remembered it?{" "}
+        <Link href="/login" className="font-medium text-foreground hover:underline">
+          Log in
+        </Link>
+      </p>
+    </form>
+  );
+}
+
+export function ResetPasswordForm() {
+  // The email links here with ?token=...; without one, the token is pasted in.
+  const token = useSearchParams().get("token");
+  const [state, action, pending] = useActionState(resetPassword, {});
+  return (
+    <form action={action} className="flex flex-col gap-4">
+      <ErrorMessage state={state} />
+      {token ? (
+        <input type="hidden" name="token" value={token} />
+      ) : (
+        <Field
+          label="Reset token"
+          name="token"
+          autoComplete="off"
+          required
+          autoFocus
+          hint="It's in the email we sent you."
+        />
+      )}
+      <Field
+        label="New password"
+        name="password"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={8}
+        maxLength={128}
+        autoFocus={!!token}
+        hint="At least 8 characters."
+      />
+      <Field
+        label="Confirm new password"
+        name="confirm"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={8}
+        maxLength={128}
+      />
+      <Submit pending={pending} label="Change password" />
+      <p className="text-center text-sm text-muted">
+        Need a new link?{" "}
+        <Link href="/forgot-password" className="font-medium text-foreground hover:underline">
+          Ask again
         </Link>
       </p>
     </form>
