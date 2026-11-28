@@ -42,9 +42,15 @@ of this repo can assume.
 - **The browser never calls the API.** The API has no CORS headers, so all
   requests go through the Next.js server: Server Components read data
   (`lib/api.ts`, `lib/threads.ts`) and Server Actions write it (`app/actions.ts`).
-- **Auth** posts to `/auth/token` and keeps the access token in an httpOnly
-  cookie that expires with the token (`lib/session.ts`). When it expires,
-  you're shown as logged out.
+- **Auth** posts to `/auth/token` and keeps the access token, and the refresh
+  token the API sets as a cookie, in httpOnly cookies of this app's own
+  (`lib/session.ts`). Server Components can't write cookies, so `proxy.ts`
+  trades the refresh token for new tokens before any request that arrives
+  within a minute of the access token expiring, or after it has. Requests
+  that arrive together with the same refresh token share one refresh, since
+  the API ends the login when a refresh token is used twice. Logging out
+  revokes the refresh token with `/auth/logout`. You're shown as logged out
+  once the refresh token expires or is revoked.
 - **AI replies** are created by the API in the background after a post or
   comment is saved. The UI works out which questions are still unanswered
   (`pendingReplies` in `lib/assistants.ts`), shows "Claude is thinking…", and
