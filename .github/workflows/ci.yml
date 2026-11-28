@@ -1,4 +1,4 @@
-# Lints and builds every push and pull request. Pushes to main that pass are
+# Lints, tests and builds every push and pull request. Pushes to main that pass are
 # deployed to ECS with scripts/deploy.sh, the same script used locally.
 
 name: CI
@@ -21,6 +21,7 @@ jobs:
           cache: yarn
       - run: yarn install --frozen-lockfile
       - run: yarn lint
+      - run: yarn test
       # Also type checks the project.
       - run: yarn build
         env:
