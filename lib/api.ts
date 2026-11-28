@@ -1,5 +1,5 @@
 import "server-only";
-import type { Comment, Post, User } from "./types";
+import type { Comment, Me, Post, User } from "./types";
 
 // The API doesn't send CORS headers, so the browser never calls it directly:
 // every request goes through Server Components and Server Actions.
@@ -108,7 +108,7 @@ export const listUserComments = (userId: number) =>
 
 export const getPost = (postId: number) => request<Post>(`/posts/${postId}`);
 export const getUser = (userId: number) => request<User>(`/users/${userId}`);
-export const getMe = (token: string) => request<User>("/users/me", { token });
+export const getMe = (token: string) => request<Me>("/users/me", { token });
 
 // Auth
 
@@ -166,7 +166,7 @@ export const logout = (refreshToken: string) =>
   });
 
 export const createUser = (username: string, email: string, password: string) =>
-  request<User>("/users", { method: "POST", json: { username, email, password } });
+  request<Me>("/users", { method: "POST", json: { username, email, password } });
 
 // Answers the same whether or not an account uses the address.
 export const requestPasswordReset = (email: string) =>

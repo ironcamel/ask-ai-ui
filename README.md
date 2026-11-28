@@ -57,7 +57,10 @@ of this repo can assume.
   refreshes the page every few seconds until the reply arrives or two minutes
   pass (`components/pending-reply.tsx`). Assistant replies render as Markdown.
 - The composer mirrors the API's mention rules, so it can tell you before you
-  post whether an assistant will answer.
+  post whether an assistant will answer. It also counts down to the API's
+  10,000-character limit. When the assistants' hourly quota is used up, the API
+  rejects the post or comment outright, and the composer keeps the text and
+  shows why.
 
 ## Limitations
 

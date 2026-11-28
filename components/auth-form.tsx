@@ -135,7 +135,8 @@ export function ForgotPasswordForm() {
         <Notice>
           If an account uses <strong className="font-semibold">{state.sentTo}</strong>,
           we&apos;ve emailed it a link to reset the password. The link works once and
-          expires soon.
+          expires soon. Another can&apos;t be sent for a few minutes, so check your
+          spam folder before asking again.
         </Notice>
         <p className="text-center text-sm text-muted">
           Got a token instead of a link?{" "}

@@ -9,6 +9,7 @@ import {
   getToken,
   saveTokens,
 } from "@/lib/session";
+import { MAX_BODY_LENGTH } from "@/lib/types";
 
 export type ActionResult = { error?: string };
 
@@ -34,6 +35,12 @@ async function failure(error: unknown): Promise<ActionResult> {
     if (error.status === 404) {
       return { error: "That no longer exists." };
     }
+    // An assistant quota is used up. Nothing was created.
+    if (error.status === 429) {
+      return {
+        error: `${error.message}. Try again later, or send it without the @mention.`,
+      };
+    }
     return { error: error.message };
   }
   console.error(error);
@@ -42,6 +49,16 @@ async function failure(error: unknown): Promise<ActionResult> {
 
 function text(formData: FormData, name: string): string {
   return String(formData.get(name) ?? "").trim();
+}
+
+// The API counts characters, not UTF-16 code units.
+function bodyError(body: string, empty: string): string | undefined {
+  if (!body) {
+    return empty;
+  }
+  if ([...body].length > MAX_BODY_LENGTH) {
+    return `Keep it to ${MAX_BODY_LENGTH.toLocaleString("en-US")} characters.`;
+  }
 }
 
 // Only follow redirects back into this app.
@@ -149,8 +166,9 @@ export async function logout() {
 export async function createPost(formData: FormData): Promise<ActionResult> {
   const token = await requireToken();
   const body = text(formData, "body");
-  if (!body) {
-    return { error: "Write something first." };
+  const invalid = bodyError(body, "Write something first.");
+  if (invalid) {
+    return { error: invalid };
   }
   try {
     await api.createPost(token, body);
@@ -167,8 +185,9 @@ export async function updatePost(
 ): Promise<ActionResult> {
   const token = await requireToken();
   const body = text(formData, "body");
-  if (!body) {
-    return { error: "A post can't be empty." };
+  const invalid = bodyError(body, "A post can't be empty.");
+  if (invalid) {
+    return { error: invalid };
   }
   try {
     await api.updatePost(token, postId, body);
@@ -204,8 +223,9 @@ export async function createComment(
 ): Promise<ActionResult> {
   const token = await requireToken();
   const body = text(formData, "body");
-  if (!body) {
-    return { error: "Write something first." };
+  const invalid = bodyError(body, "Write something first.");
+  if (invalid) {
+    return { error: invalid };
   }
   try {
     await api.createComment(token, postId, body);
@@ -222,8 +242,9 @@ export async function updateComment(
 ): Promise<ActionResult> {
   const token = await requireToken();
   const body = text(formData, "body");
-  if (!body) {
-    return { error: "A comment can't be empty." };
+  const invalid = bodyError(body, "A comment can't be empty.");
+  if (invalid) {
+    return { error: invalid };
   }
   try {
     await api.updateComment(token, commentId, body);
