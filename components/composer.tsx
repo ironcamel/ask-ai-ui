@@ -10,6 +10,22 @@ import {
   splitMentions,
   type Assistant,
 } from "@/lib/assistants";
+import { MAX_BODY_LENGTH } from "@/lib/types";
+
+// Start counting down this close to the limit.
+const LENGTH_WARNING = 500;
+
+function lengthHint(body: string): { text: string; over: boolean } | null {
+  // The API counts characters of the trimmed body, not UTF-16 code units.
+  const left = MAX_BODY_LENGTH - [...body.trim()].length;
+  if (left > LENGTH_WARNING) {
+    return null;
+  }
+  const n = Math.abs(left).toLocaleString("en-US");
+  return left < 0
+    ? { text: `${n} characters over the limit.`, over: true }
+    : { text: `${n} characters left.`, over: false };
+}
 
 function mentionHint(
   body: string,
@@ -62,10 +78,14 @@ export function Composer({
   const [body, setBody] = useState(initialBody);
   const [focused, setFocused] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  // The text the last error was about, so editing it clears the error.
+  const [failedBody, setFailedBody] = useState<string>();
   const [state, formAction, pending] = useActionState(
     async (_prev: ActionResult, formData: FormData) => {
       const result = await action(formData);
-      if (!result.error) {
+      if (result.error) {
+        setFailedBody(String(formData.get(name) ?? ""));
+      } else {
         setBody(initialBody);
         onSaved?.();
       }
@@ -73,6 +93,7 @@ export function Composer({
     },
     {},
   );
+  const error = body === failedBody ? state.error : undefined;
 
   // Grow with the text instead of scrolling.
   useLayoutEffect(() => {
@@ -112,8 +133,9 @@ export function Composer({
     splitMentions(body).flatMap((p) => (p.mention ? [p.mention] : [])),
   );
   const hint = assistantHints ? mentionHint(body, mentioned) : null;
+  const length = lengthHint(body);
   const empty = body.trim() === "";
-  const showControls = !compact || focused || !empty || Boolean(state.error);
+  const showControls = !compact || focused || !empty || Boolean(error);
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
@@ -161,14 +183,14 @@ export function Composer({
         <p
           aria-live="polite"
           className={`min-w-0 flex-1 text-xs ${
-            state.error
+            error || length?.over
               ? "text-danger"
-              : hint?.tone === "warn"
+              : length || hint?.tone === "warn"
                 ? "text-amber-700 dark:text-amber-400"
                 : "text-muted"
           }`}
         >
-          {state.error ?? hint?.text}
+          {error ?? length?.text ?? hint?.text}
         </p>
         <div className="ml-auto flex items-center gap-2">
           {onCancel && (
@@ -182,7 +204,7 @@ export function Composer({
           )}
           <button
             type="submit"
-            disabled={pending || empty}
+            disabled={pending || empty || length?.over}
             className="rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-fg transition-opacity hover:opacity-90 disabled:opacity-40"
           >
             {pending ? "Sending…" : submitLabel}
